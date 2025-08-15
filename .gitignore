@@ -18,6 +18,8 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 
 # Environment variables
 .env
@@ -53,3 +55,20 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Python binary files in context_portal
+context_portal/**/__pycache__/
+context_portal/**/*.py[cod]
+context_portal/**/*.pyo
+context_portal/**/*.pyd
+
+# ConPort vector data and embeddings
+context_portal/conport_vector_data/
