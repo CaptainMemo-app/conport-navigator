@@ -1,0 +1,26 @@
+{
+  "name": "memory-navigator",
+  "version": "1.0.0",
+  "description": "A lightweight web application for navigating and editing ConPort (Context Portal MCP) data with an integrated markdown editor.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "node server-optimized.js",
+    "start:mcp": "node server-mcp-backup.js",
+    "start:optimized": "node server-optimized.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:improved": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.2",
+    "better-sqlite3": "^12.2.0",
+    "chokidar": "^4.0.3",
+    "express": "^5.1.0",
+    "playwright": "^1.54.2"
+  }
+}

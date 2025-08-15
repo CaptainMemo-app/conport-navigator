@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConPort Navigator - CodeMirror Full</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+      --success: #27ae60;
+      --danger: #e74c3c;
+      --warning: #f39c12;
+      --dark: #1a1a1a;
+      --sidebar: #2c3e50;
+      --border: #ddd;
+      --text: #333;
+      --text-muted: #666;
+      --bg: #f5f5f5;
+      --white: #fff;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    
+    /* Header */
+    #header {
+      background: var(--dark);
+      color: white;
+      padding: 10px 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+    }
+    
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    #header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .project-controls {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    #project-select {
+      padding: 6px 12px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: white;
+      font-size: 14px;
+      min-width: 250px;
+      cursor: pointer;
+    }
+    
+    #add-project-btn {
+      padding: 6px 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    #add-project-btn:hover {
+      background: var(--primary-dark);
+    }
+    
+    #connection-status {
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      background: var(--success);
+    }
+    
+    #connection-status.error {
+      background: var(--danger);
+    }
+    
+    /* Project Info Bar */
+    .project-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #aaa;
+      padding-top: 8px;
+      border-top: 1px solid #333;
+    }
+    
+    .project-path {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .project-path-text {
+      font-family: 'Monaco', 'Menlo', monospace;
+      color: #6c9bd2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .project-stats {
+      display: flex;
+      gap: 15px;
+      flex-shrink: 0;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .stat-count {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    /* Main Content */
+    #main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Data Type Sidebar */
+    #data-sidebar {
+      width: 240px;
+      background: var(--sidebar);
+      color: white;
+      padding: 20px 15px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    
+    #data-sidebar h2 {
+      font-size: 16px;
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: #ecf0f1;
+    }
+    
+    #search {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 5px;
+      background: #34495e;
+      color: white;
+      font-size: 14px;
+    }
+    
+    #search::placeholder {
+      color: #95a5a6;
+    }
+    
+    .data-type {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background 0.2s;
+      margin-bottom: 5px;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .data-type:hover {
+      background: #34495e;
+    }
+    
+    .data-type.active {
+      background: var(--primary);
+    }
+    
+    .data-type-count {
+      background: rgba(0,0,0,0.2);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      min-width: 20px;
+      text-align: center;
+    }
+    
+    /* Tree Navigation Panel */
+    #tree-panel {
+      width: 300px;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s;
+    }
+    
+    #tree-panel.collapsed {
+      width: 0;
+      overflow: hidden;
+    }
+    
+    .tree-header {
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .tree-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+    }
+    
+    .tree-search {
+      padding: 10px 15px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    
+    .tree-search input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    .tree-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0;
+    }
+    
+    /* Tree Items */
+    .tree-item {
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+    }
+    
+    .tree-item-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 15px;
+      transition: background 0.2s;
+    }
+    
+    .tree-item-header:hover {
+      background: #f0f0f0;
+    }
+    
+    .tree-item-header.active {
+      background: #e3f2fd;
+      font-weight: 500;
+    }
+    
+    .tree-expand-icon {
+      width: 16px;
+      margin-right: 4px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .tree-item.collapsed .tree-expand-icon {
+      transform: rotate(-90deg);
+    }
+    
+    .tree-item-icon {
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    
+    .tree-item-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .tree-item-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+    
+    .tree-children {
+      padding-left: 20px;
+      display: block;
+    }
+    
+    .tree-item.collapsed .tree-children {
+      display: none;
+    }
+    
+    /* List Items */
+    .list-item {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .list-item:hover {
+      background: #f9f9f9;
+    }
+    
+    .list-item.active {
+      background: #e3f2fd;
+      border-left: 3px solid #2196f3;
+    }
+    
+    .list-item-title {
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    
+    .list-item-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: #999;
+      font-size: 14px;
+    }
+    
+    /* Editor Container */
+    #editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--white);
+      min-width: 0;
+    }
+    
+    /* Editor Toolbar */
+    .editor-toolbar {
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    
+    .toolbar-group {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    
+    .toolbar-separator {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 10px;
+    }
+    
+    .toolbar-btn {
+      padding: 6px 12px;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .toolbar-btn:hover {
+      background: #f0f0f0;
+    }
+    
+    .toolbar-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    /* Editor Info Bar */
+    .editor-info {
+      padding: 8px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .editor-path {
+      font-family: monospace;
+      color: var(--text);
+    }
+    
+    .editor-stats {
+      display: flex;
+      gap: 15px;
+    }
+    
+    /* CodeMirror Container */
+    #codemirror-editor {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* CodeMirror Styles */
+    .cm-editor {
+      height: 100%;
+      font-size: 14px;
+    }
+    
+    .cm-focused {
+      outline: none;
+    }
+    
+    .cm-line {
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    
+    .cm-gutters {
+      background: #f8f9fa;
+      border-right: 1px solid var(--border);
+    }
+    
+    /* View Mode Tabs */
+    .view-tabs {
+      display: flex;
+      gap: 2px;
+      background: #e0e0e0;
+      padding: 2px;
+      border-radius: 4px;
+      margin-left: auto;
+    }
+    
+    .view-tab {
+      padding: 6px 12px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      border-radius: 3px;
+      transition: background 0.2s;
+    }
+    
+    .view-tab.active {
+      background: white;
+    }
+    
+    .view-tab:hover:not(.active) {
+      background: rgba(255,255,255,0.5);
+    }
+    
+    /* Status Messages */
+    .status-message {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      background: var(--dark);
+      color: white;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      font-size: 14px;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .status-message.show {
+      display: block;
+    }
+    
+    .status-message.success {
+      background: var(--success);
+    }
+    
+    .status-message.error {
+      background: var(--danger);
+    }
+    
+    .status-message.warning {
+      background: var(--warning);
+    }
+    
+    /* Loading Indicator */
+    .loading {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    .loading.show {
+      display: block;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.show {
+      display: flex !important;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .modal-header {
+      margin-bottom: 25px;
+    }
+    
+    .modal-header h2 {
+      font-size: 24px;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+    
+    .modal-header p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .manual-input-section {
+      margin-bottom: 25px;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+      font-size: 14px;
+    }
+    
+    .path-input-container {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    
+    .path-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: monospace;
+      transition: border-color 0.2s;
+    }
+    
+    .path-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    .browse-button {
+      padding: 12px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    
+    .browse-button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .browse-button:hover span {
+      color: white !important;
+    }
+    
+    .validation-status {
+      margin-top: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+    }
+    
+    .validation-status.show {
+      display: block;
+    }
+    
+    .validation-status.valid {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .validation-status.invalid {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .validation-status.checking {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .project-name-input {
+      margin-top: 15px;
+    }
+    
+    .project-name-input input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .modal-footer {
+      margin-top: 25px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    button {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: white;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    button:hover:not(:disabled) {
+      background: #f0f0f0;
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    button.primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    button.primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      #data-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(0);
+        transition: transform 0.3s;
+      }
+      
+      #data-sidebar.collapsed {
+        transform: translateX(-100%);
+      }
+      
+      #tree-panel {
+        position: absolute;
+        left: 240px;
+        top: 0;
+        bottom: 0;
+        z-index: 99;
+      }
+      
+      .toolbar-btn span {
+        display: none;
+      }
+      
+      .project-stats {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div id="header">
+    <div class="header-top">
+      <h1>🧭 ConPort Navigator</h1>
+      <div class="project-controls">
+        <label style="color: #aaa; font-size: 14px;">Project:</label>
+        <select id="project-select">
+          <!-- Projects will be loaded here -->
+        </select>
+        <button id="add-project-btn" onclick="openAddProjectModal()">+ Add Project</button>
+        <div id="connection-status">Connected</div>
+      </div>
+    </div>
+    <div class="project-info">
+      <div class="project-path">
+        <span>📁 Path:</span>
+        <span class="project-path-text" id="project-path-display">No project selected</span>
+      </div>
+      <div class="project-stats" id="project-stats">
+        <div class="stat-item">
+          <span>📊</span>
+          <span class="stat-count" id="stat-decisions">0</span>
+          <span>decisions</span>
+        </div>
+        <div class="stat-item">
+          <span>✅</span>
+          <span class="stat-count" id="stat-progress">0</span>
+          <span>progress</span>
+        </div>
+        <div class="stat-item">
+          <span>📦</span>
+          <span class="stat-count" id="stat-custom">0</span>
+          <span>custom data</span>
+        </div>
+        <div class="stat-item">
+          <span>⚡</span>
+          <span class="stat-count" id="stat-queries">0</span>
+          <span>queries</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main Content -->
+  <div id="main-content">
+    <!-- Data Type Sidebar -->
+    <div id="data-sidebar">
+      <h2>Data Types</h2>
+      <input type="text" id="search" placeholder="Search everything..." />
+      
+      <div class="data-type" data-type="product_context">
+        <span>Product Context</span>
+        <span class="data-type-count" id="count-product_context">-</span>
+      </div>
+      <div class="data-type" data-type="active_context">
+        <span>Active Context</span>
+        <span class="data-type-count" id="count-active_context">-</span>
+      </div>
+      <div class="data-type" data-type="decisions">
+        <span>Decisions</span>
+        <span class="data-type-count" id="count-decisions">-</span>
+      </div>
+      <div class="data-type" data-type="progress">
+        <span>Progress</span>
+        <span class="data-type-count" id="count-progress">-</span>
+      </div>
+      <div class="data-type" data-type="system_patterns">
+        <span>System Patterns</span>
+        <span class="data-type-count" id="count-system_patterns">-</span>
+      </div>
+      <div class="data-type" data-type="custom_data">
+        <span>Custom Data</span>
+        <span class="data-type-count" id="count-custom_data">-</span>
+      </div>
+    </div>
+    
+    <!-- Tree Navigation Panel -->
+    <div id="tree-panel">
+      <div class="tree-header">
+        <span class="tree-title">Data Structure</span>
+        <button class="toolbar-btn" id="refresh-tree" title="Refresh">
+          🔄
+        </button>
+      </div>
+      <div class="tree-search">
+        <input type="text" id="tree-search-input" placeholder="Search in data...">
+      </div>
+      <div class="tree-content" id="tree-content">
+        <div class="empty-state">Select a data type to view items</div>
+      </div>
+    </div>
+    
+    <!-- Editor Container -->
+    <div id="editor-container">
+      <div class="editor-toolbar">
+        <div class="toolbar-group">
+          <button class="toolbar-btn" id="btn-save" title="Save">
+            💾 <span>Save</span>
+          </button>
+          <button class="toolbar-btn" id="btn-format" title="Format">
+            ✨ <span>Format</span>
+          </button>
+          <button class="toolbar-btn" id="btn-copy" title="Copy">
+            📋 <span>Copy</span>
+          </button>
+        </div>
+        
+        <div class="toolbar-separator"></div>
+        
+        <div class="toolbar-group">
+          <button class="toolbar-btn" id="btn-search" title="Search (Ctrl+F)">
+            🔍 <span>Search</span>
+          </button>
+        </div>
+        
+        <div class="toolbar-separator"></div>
+        
+        <div class="toolbar-group">
+          <button class="toolbar-btn" id="btn-undo" title="Undo">
+            ↶
+          </button>
+          <button class="toolbar-btn" id="btn-redo" title="Redo">
+            ↷
+          </button>
+        </div>
+        
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="edit">Edit</button>
+          <button class="view-tab" data-view="preview">Preview</button>
+          <button class="view-tab" data-view="raw">Raw</button>
+        </div>
+      </div>
+      
+      <div class="editor-info">
+        <span class="editor-path" id="editor-path">No data selected</span>
+        <div class="editor-stats">
+          <span id="editor-lines">Lines: 0</span>
+          <span id="editor-size">Size: 0 KB</span>
+          <span id="editor-type">Type: JSON</span>
+        </div>
+      </div>
+      
+      <!-- CodeMirror Editor -->
+      <div id="codemirror-editor"></div>
+      
+      <!-- Loading Indicator -->
+      <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Status Message -->
+  <div class="status-message" id="status-message"></div>
+  
+  <!-- Add Project Modal -->
+  <div class="modal" id="add-project-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Project</h2>
+        <p>Select a folder containing a ConPort database</p>
+      </div>
+      
+      <div class="manual-input-section">
+        <div class="input-group">
+          <label for="new-project-path">Project Path</label>
+          <div class="path-input-container">
+            <input type="text" id="new-project-path" class="path-input" placeholder="/path/to/your/conport/project">
+            <button type="button" class="browse-button" id="browse-button" onclick="browseForFolder()">
+              <span>📂</span>
+              <span>Browse</span>
+            </button>
+          </div>
+          <div class="validation-status" id="path-validation-status"></div>
+        </div>
+        
+        <div class="input-group">
+          <label for="new-project-name">Project Name</label>
+          <div class="project-name-input">
+            <input type="text" id="new-project-name" placeholder="My ConPort Project">
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" id="cancel-project-btn" onclick="closeAddProjectModal()">Cancel</button>
+        <button type="button" class="primary" id="add-project-confirm" onclick="addNewProject()">Add Project</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Load Enhanced Editor Integration -->
+  <script src="codemirror-integration.js"></script>
+  
+  <!-- Load Simple App (now with enhanced editor support) -->
+  <script src="app-simple.js"></script>
+  
+  <!-- Optional: Try to load full CodeMirror version for additional features -->
+  <script type="module">
+    // Try to load the full CodeMirror app for advanced features
+    import('./codemirror-full-app.js').then(() => {
+      console.log('Full CodeMirror app loaded successfully');
+    }).catch(err => {
+      console.log('Full CodeMirror app not loaded, using enhanced fallback:', err.message);
+    });
+  </script>
+</body>
+</html>

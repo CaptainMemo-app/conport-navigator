@@ -1,0 +1,64 @@
+{
+  "projects": [
+    {
+      "id": "default",
+      "name": "Spec Driven Memory Bank",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#3498db",
+      "active": false
+    },
+    {
+      "id": "1755094725163",
+      "name": "claude-code-webui",
+      "path": "/Users/pps/Documents/DEV/LAB/claude-code-web-ui/claude-code-webui",
+      "color": "#79ecaf",
+      "active": true
+    },
+    {
+      "id": "1755100218575",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#6cb080",
+      "active": false
+    },
+    {
+      "id": "1755100218588",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#6cbef8",
+      "active": false
+    },
+    {
+      "id": "1755100287782",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#e6977",
+      "active": false
+    },
+    {
+      "id": "1755100287787",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#ddfede",
+      "active": false
+    },
+    {
+      "id": "1755100937639",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#3f751f",
+      "active": false
+    },
+    {
+      "id": "1755100937664",
+      "name": "spec-driven-memory-bank-app",
+      "path": "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app",
+      "color": "#240374",
+      "active": false
+    }
+  ],
+  "recentPaths": [
+    "/Users/pps/Documents/DEV/LAB/claude-code-web-ui/claude-code-webui",
+    "/Users/pps/Documents/DEV/LAB/spec-driven-memory-bank-app"
+  ]
+}
