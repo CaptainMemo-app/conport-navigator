@@ -5,10 +5,25 @@
       "name": "Test Project",
       "path": ".",
       "color": "#3498db",
+      "active": false
+    },
+    {
+      "id": "1755242297415",
+      "name": ".",
+      "path": "/Users/pps/Documents/DEV/LAB/claude-code-web-ui/claude-code-webui",
+      "color": "#fde933",
       "active": true
+    },
+    {
+      "id": "1755242297450",
+      "name": ".",
+      "path": "/Users/pps/Documents/DEV/LAB/claude-code-web-ui/claude-code-webui",
+      "color": "#f93c56",
+      "active": false
     }
   ],
   "recentPaths": [
+    "/Users/pps/Documents/DEV/LAB/claude-code-web-ui/claude-code-webui",
     "."
   ]
 }
