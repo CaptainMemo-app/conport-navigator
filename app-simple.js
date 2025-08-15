@@ -333,68 +333,53 @@ function updateTreeContent() {
 
 // Load data in editor with enhanced formatting
 function loadDataInEditor(item) {
-  console.log('Loading in editor:', item);
-  
-  let content = '';
-  let language = 'json';
-  
-  if (item && typeof item === 'object') {
-    // Handle context data specially
-    if (item.content && (currentType === 'product_context' || currentType === 'active_context')) {
-      try {
-        const parsed = JSON.parse(item.content);
-        content = JSON.stringify(parsed, null, 2);
-        language = 'json';
-      } catch {
-        content = item.content;
-        // Try to detect language from content
-        if (typeof window.detectLanguage === 'function') {
-          language = window.detectLanguage(content);
+    console.log('Loading in editor:', item);
+    currentItem = item;
+
+    let content = '';
+    let language = 'json';
+
+    if (item && typeof item === 'object') {
+        // Handle context data specially
+        if (item.content && (currentType === 'product_context' || currentType === 'active_context')) {
+            try {
+                const parsed = JSON.parse(item.content);
+                content = JSON.stringify(parsed, null, 2);
+                language = 'json';
+            } catch {
+                content = item.content;
+                language = 'text';
+            }
+        } else {
+            content = JSON.stringify(item, null, 2);
+            language = 'json';
         }
-      }
-    } else {
-      content = JSON.stringify(item, null, 2);
-      language = 'json';
     }
-  }
-  
-  // Store raw content for editing
-  rawItemContent = content || '{}';
-  
-  // Update editor info
-  const editorPath = document.getElementById('editor-path');
-  const editorType = document.getElementById('editor-type');
-  const editorLines = document.getElementById('editor-lines');
-  const editorSize = document.getElementById('editor-size');
-  
-  if (editorPath) editorPath.textContent = getItemTitle(item) || 'No data selected';
-  if (editorType) editorType.textContent = `Type: ${language.toUpperCase()}`;
-  
-  if (content) {
-    const lines = content.split('\n').length;
-    const size = new Blob([content]).size;
-    
-    if (editorLines) editorLines.textContent = `Lines: ${lines}`;
-    if (editorSize) editorSize.textContent = `Size: ${formatBytes(size)}`;
-  }
-  
-  // Apply the current user-selected mode (don't force preview)
-  console.log('🔧 loadDataInEditor applying mode:', editorMode);
-  switch(editorMode) {
-    case 'edit':
-      console.log('🔧 Applying edit mode (user preference preserved)');
-      makeEditorEditable();
-      break;
-    case 'raw':
-      console.log('🔧 Applying raw mode (user preference preserved)');
-      makeEditorRaw();
-      break;
-    case 'preview':
-    default:
-      console.log('🔧 Applying preview mode (default)');
-      makeEditorPreview();
-      break;
-  }
+
+    rawItemContent = content || '{}';
+
+    const editorContainer = document.getElementById('codemirror-editor');
+    if (window.createEnhancedJSONEditor) {
+        const view = window.createEnhancedJSONEditor(editorContainer, rawItemContent);
+        setEditorMode(editorMode, view);
+    }
+
+    // Update editor info
+    const editorPath = document.getElementById('editor-path');
+    const editorType = document.getElementById('editor-type');
+    const editorLines = document.getElementById('editor-lines');
+    const editorSize = document.getElementById('editor-size');
+
+    if (editorPath) editorPath.textContent = getItemTitle(item) || 'No data selected';
+    if (editorType) editorType.textContent = `Type: ${language.toUpperCase()}`;
+
+    if (content) {
+        const lines = content.split('\n').length;
+        const size = new Blob([content]).size;
+
+        if (editorLines) editorLines.textContent = `Lines: ${lines}`;
+        if (editorSize) editorSize.textContent = `Size: ${formatBytes(size)}`;
+    }
 }
 
 // HTML escape utility
@@ -456,102 +441,36 @@ function formatBytes(bytes) {
 
 // Toolbar Functions
 function formatJSON() {
-  console.log('Format JSON clicked');
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  const pre = editorContainer.querySelector('pre');
-  if (!pre) return;
-  
-  try {
-    // Get the text content (without line numbers)
-    const textContent = pre.textContent || pre.innerText || '';
-    
-    // Extract JSON from line-numbered text
-    const lines = textContent.split('\n');
-    const jsonContent = lines.map(line => {
-      // Remove line numbers (first 4 characters typically)
-      return line.replace(/^\s*\d+\s+/, '');
-    }).join('\n');
-    
-    // Try to parse and reformat
-    const parsed = JSON.parse(jsonContent);
-    const formatted = JSON.stringify(parsed, null, 2);
-    
-    // Reload the editor with formatted content
-    const item = { formatted: true };
-    item.content = formatted;
-    loadDataInEditor({ content: formatted });
-    
-    showStatus('JSON formatted successfully', 'success');
-  } catch (error) {
-    console.error('Format error:', error);
-    showStatus('Invalid JSON: ' + error.message, 'error');
-  }
+    const view = window.getEditorView();
+    if (!view) return;
+
+    try {
+        const content = view.state.doc.toString();
+        const parsed = JSON.parse(content);
+        const formatted = JSON.stringify(parsed, null, 2);
+
+        view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: formatted }
+        });
+        showStatus('JSON formatted successfully', 'success');
+    } catch (error) {
+        showStatus('Invalid JSON, cannot format', 'error');
+    }
 }
 
 function copyContent() {
-  console.log('Copy content clicked');
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  const pre = editorContainer.querySelector('pre');
-  if (!pre) return;
-  
-  try {
-    // Get text content without line numbers
-    const textContent = pre.textContent || pre.innerText || '';
-    const lines = textContent.split('\n');
-    const content = lines.map(line => {
-      // Remove line numbers (first part before actual content)
-      return line.replace(/^\s*\d+\s+/, '');
-    }).join('\n');
-    
-    navigator.clipboard.writeText(content).then(() => {
-      showStatus('Content copied to clipboard', 'success');
-    }).catch(() => {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      showStatus('Content copied to clipboard', 'success');
-    });
-  } catch (error) {
-    showStatus('Failed to copy content', 'error');
-  }
+    const content = getEditorContent();
+    if (content) {
+        navigator.clipboard.writeText(content).then(() => {
+            showStatus('Content copied to clipboard', 'success');
+        }, () => {
+            showStatus('Failed to copy content', 'error');
+        });
+    }
 }
 
-let currentSearchFeature = null;
 let editorMode = 'preview'; // 'edit', 'preview', 'raw'
-let isEditable = false;
 let rawItemContent = null; // Store raw content for editing
-
-function toggleSearch() {
-  console.log('Toggle search clicked');
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  if (typeof window.addSearchFeature === 'function') {
-    if (!currentSearchFeature) {
-      currentSearchFeature = window.addSearchFeature(editorContainer);
-    }
-    currentSearchFeature.show();
-  } else {
-    // Fallback search - simple browser search
-    const searchTerm = prompt('Search for:');
-    if (searchTerm) {
-      // Use browser's built-in find functionality
-      if (window.find) {
-        window.find(searchTerm);
-      } else {
-        showStatus('Search functionality not available', 'warning');
-      }
-    }
-  }
-}
 
 // Save content back to ConPort
 async function saveContent() {
@@ -622,287 +541,41 @@ async function saveContent() {
 
 // Get content from editor
 function getEditorContent() {
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return null;
-  
-  // Check if in editable mode (textarea) - priority
-  const textarea = editorContainer.querySelector('textarea');
-  if (textarea) {
-    console.log('Getting content from textarea:', textarea.value.substring(0, 100) + '...');
-    return textarea.value;
-  }
-  
-  // Otherwise return stored raw content
-  if (rawItemContent) {
-    console.log('Getting content from stored raw content:', rawItemContent.substring(0, 100) + '...');
-    return rawItemContent;
-  }
-  
-  // Last resort - get from pre element
-  const pre = editorContainer.querySelector('pre');
-  if (pre) {
-    console.log('Getting content from pre element');
-    return pre.textContent || pre.innerText || '';
-  }
-  
-  return null;
+    const view = window.getEditorView();
+    if (view) {
+        return view.state.doc.toString();
+    }
+    return null;
 }
 
 // Set editor mode
-function setEditorMode(mode) {
-  console.log('🔧 Setting editor mode to:', mode);
-  console.log('🔧 Current item:', currentItem ? 'exists' : 'null');
-  console.log('🔧 Raw content:', rawItemContent ? rawItemContent.substring(0, 50) + '...' : 'null');
-  
-  editorMode = mode;
-  
-  // Update view tab states (not buttons)
-  document.querySelectorAll('.view-tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  const selectedTab = document.querySelector(`[data-view="${mode}"]`);
-  if (selectedTab) {
-    selectedTab.classList.add('active');
-    console.log('🔧 Tab activated:', selectedTab);
-  } else {
-    console.error('🔧 Tab not found for mode:', mode);
-  }
-  
-  // Apply mode to current content
-  console.log('🔧 Applying mode logic...');
-  switch(mode) {
-    case 'edit':
-      console.log('🔧 Calling makeEditorEditable()');
-      makeEditorEditable();
-      break;
-    case 'preview':
-      console.log('🔧 Calling makeEditorPreview()');
-      makeEditorPreview();
-      break;
-    case 'raw':
-      console.log('🔧 Calling makeEditorRaw()');
-      makeEditorRaw();
-      break;
-  }
-  
-  showStatus(`Switched to ${mode} mode`, 'info');
-}
+function setEditorMode(mode, view) {
+    editorMode = mode;
+    view = view || window.getEditorView();
 
-// Make editor editable
-function makeEditorEditable() {
-  console.log('🔧 makeEditorEditable() called');
-  
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) {
-    console.error('🔧 Editor container not found!');
-    return;
-  }
-  
-  console.log('🔧 Editor container found:', editorContainer);
-  console.log('🔧 Raw content to use:', rawItemContent ? rawItemContent.substring(0, 100) + '...' : 'null');
-  
-  // Clear existing content
-  console.log('🔧 Clearing container...');
-  editorContainer.innerHTML = '';
-  
-  // Create textarea for editing
-  console.log('🔧 Creating textarea...');
-  const textarea = document.createElement('textarea');
-  textarea.id = 'edit-textarea'; // Add ID for easier debugging
-  textarea.style.cssText = `
-    width: 100%;
-    height: 100%;
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #ccc;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: none;
-    outline: none;
-    box-sizing: border-box;
-    color: #333;
-    min-height: 400px;
-  `;
-  
-  // Set content from stored raw content
-  const contentToUse = rawItemContent || '{\n  "test": "Click me and type here!"\n}';
-  textarea.value = contentToUse;
-  textarea.placeholder = 'Edit JSON content here...';
-  
-  console.log('🔧 Textarea created with content:', textarea.value.substring(0, 100) + '...');
-  
-  // Append to container
-  console.log('🔧 Appending textarea to container...');
-  editorContainer.appendChild(textarea);
-  isEditable = true;
-  
-  console.log('🔧 Container after append:', editorContainer.innerHTML.substring(0, 100) + '...');
-  
-  // Verify textarea is actually in DOM
-  const checkTextarea = document.getElementById('edit-textarea');
-  console.log('🔧 Textarea verification:', checkTextarea ? 'Found in DOM' : 'NOT found in DOM');
-  
-  // Focus on textarea after a brief delay
-  setTimeout(() => {
-    console.log('🔧 Attempting to focus textarea...');
-    textarea.focus();
-    console.log('🔧 Focus attempt complete');
-  }, 200);
-  
-  // Save initial content to history
-  if (rawItemContent) {
-    saveToHistory(rawItemContent);
-  }
-  
-  // Add input listener to save changes to history
-  textarea.addEventListener('input', () => {
-    console.log('🔧 Textarea input event fired');
-    // Debounce history saving to avoid too many entries
-    clearTimeout(textarea.historyTimeout);
-    textarea.historyTimeout = setTimeout(() => {
-      saveToHistory(textarea.value);
-    }, 1000);
-  });
-  
-  console.log('🔧 Edit mode setup complete!');
-}
+    if (!view) return;
 
-// Make editor preview mode
-function makeEditorPreview() {
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  console.log('Making editor preview mode with content:', rawItemContent);
-  
-  isEditable = false;
-  
-  // Use enhanced JSON editor for beautiful display
-  if (typeof window.createEnhancedJSONEditor === 'function') {
-    console.log('Using enhanced JSON editor for preview');
-    window.createEnhancedJSONEditor(editorContainer, rawItemContent || '{}');
-  } else {
-    // Fallback to simple pre
-    editorContainer.innerHTML = '';
-    const pre = document.createElement('pre');
-    pre.style.cssText = `
-      padding: 20px; 
-      background: #f8f9fa; 
-      height: 100%; 
-      overflow: auto; 
-      margin: 0; 
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; 
-      font-size: 14px;
-      line-height: 1.6;
-      border: none;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      color: #333;
-    `;
-    pre.textContent = rawItemContent || 'No content';
-    editorContainer.appendChild(pre);
-  }
-}
+    // Update view tab states
+    document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.view === mode);
+    });
 
-// Make editor raw mode  
-function makeEditorRaw() {
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  console.log('Making editor raw mode with content:', rawItemContent);
-  
-  editorContainer.innerHTML = '';
-  const pre = document.createElement('pre');
-  pre.style.cssText = `
-    padding: 20px;
-    background: #f8f9fa;
-    height: 100%;
-    overflow: auto;
-    margin: 0;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 14px;
-    line-height: 1.6;
-    border: none;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    color: #333;
-  `;
-  pre.textContent = rawItemContent || 'No content';
-  editorContainer.appendChild(pre);
-  isEditable = false;
+    let isReadOnly = mode === 'preview' || mode === 'raw';
+
+    view.dispatch({
+        effects: EditorView.editable.reconfigure(EditorState.readOnly.of(isReadOnly))
+    });
+
+    if (mode === 'raw') {
+        // In raw mode, we might want to disable syntax highlighting or use a plain text mode.
+        // For now, it's just read-only.
+    }
+
+    showStatus(`Switched to ${mode} mode`, 'info');
 }
 
 // Fold/unfold functions removed - buttons removed from UI
 
-// Undo/Redo functionality
-let editorHistory = [];
-let historyIndex = -1;
-const MAX_HISTORY = 50;
-
-function saveToHistory(content) {
-  // Remove any future history if we're not at the end
-  if (historyIndex < editorHistory.length - 1) {
-    editorHistory = editorHistory.slice(0, historyIndex + 1);
-  }
-  
-  // Add new state
-  editorHistory.push(content);
-  
-  // Limit history size
-  if (editorHistory.length > MAX_HISTORY) {
-    editorHistory.shift();
-  } else {
-    historyIndex++;
-  }
-}
-
-function undoAction() {
-  console.log('Undo clicked');
-  
-  if (historyIndex > 0) {
-    historyIndex--;
-    const content = editorHistory[historyIndex];
-    applyHistoryContent(content);
-    showStatus('Undone', 'info');
-  } else {
-    showStatus('Nothing to undo', 'warning');
-  }
-}
-
-function redoAction() {
-  console.log('Redo clicked');
-  
-  if (historyIndex < editorHistory.length - 1) {
-    historyIndex++;
-    const content = editorHistory[historyIndex];
-    applyHistoryContent(content);
-    showStatus('Redone', 'info');
-  } else {
-    showStatus('Nothing to redo', 'warning');
-  }
-}
-
-function applyHistoryContent(content) {
-  const editorContainer = document.getElementById('codemirror-editor');
-  if (!editorContainer) return;
-  
-  const textarea = editorContainer.querySelector('textarea');
-  if (textarea) {
-    textarea.value = content;
-  } else {
-    // If not in edit mode, switch to edit mode and then apply content
-    if (editorMode !== 'edit') {
-      setEditorMode('edit');
-      // Try again after mode switch
-      setTimeout(() => {
-        const newTextarea = editorContainer.querySelector('textarea');
-        if (newTextarea) {
-          newTextarea.value = content;
-        }
-      }, 100);
-    }
-  }
-}
 
 // Add Project Modal Functions
 function openAddProjectModal() {
@@ -1181,38 +854,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   
   // Toolbar button handlers
-  document.getElementById('btn-format')?.addEventListener('click', () => {
-    formatJSON();
-  });
-  
-  document.getElementById('btn-search')?.addEventListener('click', () => {
-    toggleSearch();
-  });
-  
-  document.getElementById('btn-copy')?.addEventListener('click', () => {
-    copyContent();
-  });
-  
-  document.getElementById('btn-save')?.addEventListener('click', () => {
-    saveContent();
-  });
-  
-  // Fold/unfold buttons removed from UI
-  
-  document.getElementById('btn-undo')?.addEventListener('click', () => {
-    undoAction();
-  });
-  
-  document.getElementById('btn-redo')?.addEventListener('click', () => {
-    redoAction();
-  });
-  
+  document.getElementById('btn-format')?.addEventListener('click', formatJSON);
+  document.getElementById('btn-copy')?.addEventListener('click', copyContent);
+  document.getElementById('btn-save')?.addEventListener('click', saveContent);
+
   // View tabs are different - they use data-view attribute
   document.querySelectorAll('.view-tab').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      const mode = e.target.dataset.view;
-      setEditorMode(mode);
-    });
+      tab.addEventListener('click', (e) => {
+          const mode = e.target.dataset.view;
+          setEditorMode(mode);
+      });
   });
   
   console.log('Event handlers set up, loading projects...');
